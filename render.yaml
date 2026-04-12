@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: music-album-guide
+    runtime: docker
+    plan: free
+    rootDir: MusicAlbumGuide
+    dockerfilePath: ./MusicAlbumGuide/Dockerfile
+    dockerContext: ./MusicAlbumGuide
+    healthCheckPath: /up
+    envVars:
+      - key: APP_NAME
+        value: Music Album Guide
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_URL
+        sync: false
+      - key: APP_KEY
+        sync: false
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        fromDatabase:
+          name: music-album-guide-db
+          property: connectionString
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: SESSION_DRIVER
+        value: database
+      - key: LASTFM_API_KEY
+        sync: false
+
+databases:
+  - name: music-album-guide-db
+    plan: free
