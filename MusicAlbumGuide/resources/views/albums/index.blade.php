@@ -1,4 +1,21 @@
 <x-app-layout>
+    @if(session('status'))
+        <div
+            x-data="{ show: true }"
+            x-show="show"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-2"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-300"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 translate-y-2"
+            x-init="setTimeout(() => show = false, 3000)"
+            class="fixed top-5 right-5 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg"
+        >
+            {{ session('status') }}
+        </div>
+    @endif
+
     <section class="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
         <div class="panel p-8 sm:p-10">
             <p class="hero-kicker">Nutnet Test Task</p>
@@ -75,7 +92,8 @@
                                 <div class="flex flex-wrap gap-3 pt-2">
                                     <a href="{{ route('albums.edit', $album) }}" class="btn-secondary">Edit</a>
 
-                                    <form method="POST" action="{{ route('albums.destroy', $album) }}" onsubmit="return confirm('Delete this album?');">
+                                        <form method="POST" action="{{ route('albums.destroy', $album) }}" onsubmit="return confirm('Delete this album?');">
+{{--                                        <form method="POST" action="{{ route('albums.destroy', $album) }}">--}}
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn-danger">Delete</button>

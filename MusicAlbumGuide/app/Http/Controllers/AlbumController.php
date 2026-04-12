@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Album;
-use App\Models\AlbumLog;
 use App\Services\LastFmAlbumLookup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -12,9 +11,18 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\View\View;
 use RuntimeException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
+use App\Services\AlbumService;
+use App\Http\Requests\StoreAlbumRequest;
+use App\Http\Requests\UpdateAlbumRequest;
 
 class AlbumController extends Controller implements HasMiddleware
 {
+    use AuthorizesRequests;
+
+    public function __construct(private AlbumService $service) {}
+
     public static function middleware(): array
     {
         return [
@@ -37,69 +45,46 @@ class AlbumController extends Controller implements HasMiddleware
         return view('albums.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreAlbumRequest $request): RedirectResponse
     {
-        $data = $this->validateAlbum($request);
-        $data['user_id'] = $request->user()->id;
-
-        $album = Album::create($data);
-
-        $this->logChange($album, 'created', null, $album->fresh()->only([
-            'title',
-            'artist',
-            'description',
-            'cover_url',
-            'user_id',
-        ]));
+        $this->service->create($request->validated(), $request->user());
 
         return redirect()
             ->route('albums.index')
-            ->with('status', 'Album created.');
+            ->with('status', 'Альбом создан');
     }
 
     public function edit(Album $album): View
     {
-        $this->ensureOwner($album);
-        $album->load(['logs' => fn ($query) => $query->latest()->with('user')->limit(6)]);
+        $this->authorize('update', $album);
+
+        $album->load([
+            'logs' => fn ($query) => $query->latest()->with('user')->limit(6)
+        ]);
 
         return view('albums.edit', compact('album'));
     }
 
-    public function update(Request $request, Album $album): RedirectResponse
+    public function update(UpdateAlbumRequest $request, Album $album): RedirectResponse
     {
-        $this->ensureOwner($album);
+        $this->authorize('update', $album);
 
-        $data = $this->validateAlbum($request);
-        $oldData = $album->only(['title', 'artist', 'description', 'cover_url', 'user_id']);
-
-        $album->update($data);
-
-        $this->logChange($album, 'updated', $oldData, $album->fresh()->only([
-            'title',
-            'artist',
-            'description',
-            'cover_url',
-            'user_id',
-        ]));
+        $this->service->update($album, $request->validated());
 
         return redirect()
             ->route('albums.index')
-            ->with('status', 'Album updated.');
+            ->with('status', 'Альбом обновлён');
     }
 
     public function destroy(Album $album): RedirectResponse
     {
-        $this->ensureOwner($album);
+        $this->authorize('delete', $album);
 
-        $oldData = $album->only(['title', 'artist', 'description', 'cover_url', 'user_id']);
-
-        $this->logChange($album, 'deleted', $oldData, null);
-
-        $album->delete();
+        $this->service->delete($album);
 
         return redirect()
             ->route('albums.index')
-            ->with('status', 'Album deleted.');
+            ->with('status', 'Альбом удалён');
     }
 
     public function prefill(Request $request, LastFmAlbumLookup $lookup): JsonResponse
@@ -123,31 +108,5 @@ class AlbumController extends Controller implements HasMiddleware
         }
 
         return response()->json($payload);
-    }
-
-    private function validateAlbum(Request $request): array
-    {
-        return $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'artist' => ['nullable', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'cover_url' => ['nullable', 'url', 'max:2048'],
-        ]);
-    }
-
-    private function ensureOwner(Album $album): void
-    {
-        abort_unless($album->user_id === request()->user()?->id, 403);
-    }
-
-    private function logChange(Album $album, string $action, ?array $oldData, ?array $newData): void
-    {
-        AlbumLog::create([
-            'album_id' => $album->id,
-            'user_id' => request()->user()?->id,
-            'action' => $action,
-            'old_data' => $oldData,
-            'new_data' => $newData,
-        ]);
     }
 }

@@ -12,6 +12,7 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
+    <script src="//unpkg.com/alpinejs" defer></script>
     <body class="app-body font-sans antialiased">
         <div class="app-shell">
             <div class="app-glow app-glow-one"></div>
@@ -26,11 +27,6 @@
             @endisset
 
             <main class="mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
-                @if (session('status'))
-                    <div class="mb-6 rounded-3xl border border-white/10 bg-emerald-500/15 px-5 py-4 text-sm text-emerald-100 shadow-lg shadow-emerald-950/20">
-                        {{ session('status') }}
-                    </div>
-                @endif
 
                 {{ $slot }}
             </main>
